@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Parser Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
+        <h1 class="text-2xl font-bold mb-4 text-blue-800">Quality Audit Parser</h1>
+        
+        <textarea id="inputData" class="w-full h-48 p-4 border rounded-lg mb-4" placeholder="Paste the BMS text here..."></textarea>
+        
+        <div class="flex gap-4 mb-6">
+            <button onclick="processData()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Extract Statuses</button>
+            <button id="shareBtn" class="hidden bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">Generate Share Link</button>
+        </div>
+
+        <div id="results" class="space-y-2"></div>
+    </div>
+
+   <script>
+    function processData() {
+        const rawText = document.getElementById('inputBox').value;
+        const parsedData = parseCalibration(rawText); // Calling your core logic
+        displayResults(parsedData);
+    }
+
+    function parseCalibration(text) {
+        const lines = text.split('\n');
+        const results = [];
+        const statusPattern = /^(Pass|Fail|N\/A)$/i;
+
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (statusPattern.test(trimmed)) {
+                // We assume the line BEFORE "Pass/Fail" is the attribute name
+                results.push({
+                    attribute: lines[index - 1]?.trim() || "Unknown",
+                    status: trimmed
+                });
+            }
+        });
+        return results;
+    }
+
+    function displayResults(data) {
+        const output = document.getElementById('outputArea');
+        output.innerHTML = data.map(item => `
+            <div class="result-item">
+                <strong>${item.attribute}:</strong> 
+                <span class="${item.status.toLowerCase()}">${item.status}</span>
+            </div>
+        `).join('');
+    }
+</script>
+</body>
+</html>
