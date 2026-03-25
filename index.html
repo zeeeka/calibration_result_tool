@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audit Parser Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pass { color: #16a34a; font-weight: bold; } /* Green */
+        .fail { color: #dc2626; font-weight: bold; } /* Red */
+        .n\/a { color: #9ca3af; } /* Gray */
+    </style>
 </head>
 <body class="bg-gray-100 p-8">
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
@@ -18,27 +22,36 @@
             <button id="shareBtn" class="hidden bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">Generate Share Link</button>
         </div>
 
-        <div id="results" class="space-y-2"></div>
+        <div id="results" class="space-y-2 border-t pt-4"></div>
     </div>
 
-   <script>
+<script>
     function processData() {
-        const rawText = document.getElementById('inputBox').value;
-        const parsedData = parseCalibration(rawText); // Calling your core logic
+        // MATCHED: Getting value from 'inputData'
+        const rawText = document.getElementById('inputData').value;
+        const parsedData = parseCalibration(rawText); 
         displayResults(parsedData);
     }
 
     function parseCalibration(text) {
         const lines = text.split('\n');
         const results = [];
+        // Regex looks for the word alone on a line
         const statusPattern = /^(Pass|Fail|N\/A)$/i;
 
         lines.forEach((line, index) => {
             const trimmed = line.trim();
             if (statusPattern.test(trimmed)) {
-                // We assume the line BEFORE "Pass/Fail" is the attribute name
+                // Get the line above the status
+                let attribute = lines[index - 1]?.trim() || "Unknown Attribute";
+                
+                // Cleaning: If the line above is a "Failure Reason", go one more line up
+                if (attribute.toLowerCase().includes("failure reason") && lines[index - 2]) {
+                    attribute = lines[index - 2].trim() + " (" + attribute + ")";
+                }
+
                 results.push({
-                    attribute: lines[index - 1]?.trim() || "Unknown",
+                    attribute: attribute,
                     status: trimmed
                 });
             }
@@ -47,13 +60,23 @@
     }
 
     function displayResults(data) {
-        const output = document.getElementById('outputArea');
+        // MATCHED: Putting content into 'results'
+        const output = document.getElementById('results');
+        
+        if (data.length === 0) {
+            output.innerHTML = '<p class="text-gray-500 italic">No statuses found. Make sure "Pass" or "Fail" are on their own lines.</p>';
+            return;
+        }
+
         output.innerHTML = data.map(item => `
-            <div class="result-item">
-                <strong>${item.attribute}:</strong> 
+            <div class="flex justify-between border-b py-2">
+                <span class="text-gray-700">${item.attribute}</span>
                 <span class="${item.status.toLowerCase()}">${item.status}</span>
             </div>
         `).join('');
+
+        // Show the share button once results exist
+        document.getElementById('shareBtn').classList.remove('hidden');
     }
 </script>
 </body>
