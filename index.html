@@ -27,32 +27,39 @@
 
 <script>
     function processData() {
-        // MATCHED: Getting value from 'inputData'
         const rawText = document.getElementById('inputData').value;
         const parsedData = parseCalibration(rawText); 
         displayResults(parsedData);
     }
 
     function parseCalibration(text) {
-        const lines = text.split('\n');
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l !== "");
         const results = [];
-        // Regex looks for the word alone on a line
         const statusPattern = /^(Pass|Fail|N\/A)$/i;
 
         lines.forEach((line, index) => {
-            const trimmed = line.trim();
-            if (statusPattern.test(trimmed)) {
-                // Get the line above the status
-                let attribute = lines[index - 1]?.trim() || "Unknown Attribute";
+            if (statusPattern.test(line)) {
+                let attribute = "Unknown Attribute";
                 
-                // Cleaning: If the line above is a "Failure Reason", go one more line up
-                if (attribute.toLowerCase().includes("failure reason") && lines[index - 2]) {
-                    attribute = lines[index - 2].trim() + " (" + attribute + ")";
+                // Look backwards from the "Pass/Fail" line to find the attribute name
+                for (let i = index - 1; i >= 0; i--) {
+                    const prevLine = lines[i];
+                    
+                    // Skip lines that are just "Failure Reason", "Weighted Average", or numbers
+                    if (
+                        !prevLine.toLowerCase().includes("failure reason") &&
+                        !prevLine.toLowerCase().includes("weighted average") &&
+                        !prevLine.toLowerCase().includes("qa comment") &&
+                        !/^\d+(\.\d+)?$/.test(prevLine) // Ignores standalone numbers/scores
+                    ) {
+                        attribute = prevLine;
+                        break; 
+                    }
                 }
 
                 results.push({
                     attribute: attribute,
-                    status: trimmed
+                    status: line
                 });
             }
         });
@@ -60,23 +67,28 @@
     }
 
     function displayResults(data) {
-        // MATCHED: Putting content into 'results'
         const output = document.getElementById('results');
-        
         if (data.length === 0) {
-            output.innerHTML = '<p class="text-gray-500 italic">No statuses found. Make sure "Pass" or "Fail" are on their own lines.</p>';
+            output.innerHTML = '<p class="text-gray-500 italic">No data found. Try pasting the full report.</p>';
             return;
         }
 
         output.innerHTML = data.map(item => `
-            <div class="flex justify-between border-b py-2">
-                <span class="text-gray-700">${item.attribute}</span>
-                <span class="${item.status.toLowerCase()}">${item.status}</span>
+            <div class="flex justify-between items-center border-b py-3 hover:bg-gray-50 px-2 transition">
+                <span class="text-sm text-gray-800 font-medium pr-4">${item.attribute}</span>
+                <span class="text-xs px-2 py-1 rounded-full uppercase font-bold ${getStatusClass(item.status)}">
+                    ${item.status}
+                </span>
             </div>
         `).join('');
 
-        // Show the share button once results exist
         document.getElementById('shareBtn').classList.remove('hidden');
+    }
+
+    function getStatusClass(status) {
+        if (status.toLowerCase() === 'pass') return 'bg-green-100 text-green-700';
+        if (status.toLowerCase() === 'fail') return 'bg-red-100 text-red-700';
+        return 'bg-gray-100 text-gray-500';
     }
 </script>
 </body>
